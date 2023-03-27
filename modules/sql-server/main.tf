@@ -25,6 +25,18 @@ data "azuread_user" "aad_admin" {
 
 data "azurerm_client_config" "current" {}
 
+resource "azurecaf_name" "sql_identity" {
+  name          = var.application_name
+  resource_type = "azurerm_user_assigned_identity"
+  suffixes      = [var.environment, "sql"]
+}
+
+resource "azurerm_user_assigned_identity" "sql_identity" {
+  resource_group_name = var.resource_group
+  location            = var.location
+  name                = azurecaf_name.sql_identity.result
+}
+
 resource "azurerm_mssql_server" "database" {
   name                = azurecaf_name.mssql_server.result
   resource_group_name = var.resource_group
@@ -42,6 +54,15 @@ resource "azurerm_mssql_server" "database" {
     "environment"      = var.environment
     "application-name" = var.application_name
   }
+
+  identity {
+    type = "UserAssigned"
+    identity_ids = [
+      azurerm_user_assigned_identity.sql_identity.id
+    ]
+  }
+
+  primary_user_assigned_identity_id = azurerm_user_assigned_identity.sql_identity.id
 }
 
 resource "azurecaf_name" "mssql_database" {

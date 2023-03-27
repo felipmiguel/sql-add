@@ -45,7 +45,9 @@ module "application" {
   environment      = local.environment
   location         = var.location
 
-  database_url      = module.database.database_url
+  database_url         = module.database.database_url
+  database_server_fqdn = module.database.database_server_fqdn
+  database_name        = module.database.database_name
 }
 
 module "database" {

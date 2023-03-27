@@ -19,7 +19,7 @@ resource "azurerm_service_plan" "application" {
   resource_group_name = var.resource_group
   location            = var.location
 
-  sku_name = "F1"
+  sku_name = "B1"
   os_type  = "Linux"
 
   tags = {
@@ -31,7 +31,7 @@ resource "azurerm_service_plan" "application" {
 resource "azurecaf_name" "app_identity" {
   name          = var.application_name
   resource_type = "azurerm_user_assigned_identity"
-  suffixes      = [var.environment]
+  suffixes      = [var.environment, "app"]
 }
 
 resource "azurerm_user_assigned_identity" "app_identity" {
@@ -44,6 +44,10 @@ resource "azurecaf_name" "app_service" {
   name          = var.application_name
   resource_type = "azurerm_app_service"
   suffixes      = [var.environment]
+}
+
+locals {
+  database_connection_string= "Server=tcp:${var.database_server_fqdn};Database=${var.database_name};Authentication=Active Directory Default;TrustServerCertificate=True;User ID=${azurerm_user_assigned_identity.app_identity.client_id};"
 }
 
 # This creates the service definition
@@ -69,6 +73,7 @@ resource "azurerm_linux_web_app" "application" {
     }
     always_on  = false
     ftps_state = "FtpsOnly"
+    health_check_path = "/healthz"
   }
 
   app_settings = {
@@ -76,6 +81,6 @@ resource "azurerm_linux_web_app" "application" {
 
     # These are app specific environment variables
 
-    "DATABASE_URL" = var.database_url
+    "AZURE_MSSQL_CONNECTIONSTRING" = local.database_connection_string
   }
 }
